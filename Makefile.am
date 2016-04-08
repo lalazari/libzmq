@@ -215,6 +215,16 @@ src_libzmq_la_SOURCES = \
 	src/vmci_connecter.hpp \
 	src/vmci_listener.cpp \
 	src/vmci_listener.hpp \
+	src/ofi.cpp \
+	src/ofi.hpp \
+	src/ofi_address.cpp \
+	src/ofi_address.hpp \
+	src/ofi_connecter.cpp \
+	src/ofi_connecter.hpp \
+	src/ofi_listener.cpp \
+	src/ofi_listener.hpp \
+	src/ofi_engine.hpp \
+	src/ofi_engine.cpp \
 	src/windows.hpp \
 	src/wire.hpp \
 	src/xpub.cpp \

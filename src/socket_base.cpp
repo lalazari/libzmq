@@ -51,9 +51,11 @@
 
 #include "socket_base.hpp"
 #include "tcp_listener.hpp"
+#include "ofi_listener.hpp"
 #include "ipc_listener.hpp"
 #include "tipc_listener.hpp"
 #include "tcp_connecter.hpp"
+#include "ofi_connecter.hpp"
 #include "io_thread.hpp"
 #include "session_base.hpp"
 #include "config.hpp"
@@ -66,6 +68,7 @@
 #include "address.hpp"
 #include "ipc_address.hpp"
 #include "tcp_address.hpp"
+#include "ofi_address.hpp"
 #include "udp_address.hpp"
 #include "tipc_address.hpp"
 #include "mailbox.hpp"
@@ -265,6 +268,7 @@ int zmq::socket_base_t::check_protocol (const std::string &protocol_)
     if (protocol_ != "inproc"
     &&  protocol_ != "ipc"
     &&  protocol_ != "tcp"
+    &&  protocol_ != "ofi"
     &&  protocol_ != "pgm"
     &&  protocol_ != "epgm"
     &&  protocol_ != "tipc"
@@ -609,6 +613,27 @@ int zmq::socket_base_t::bind (const char *addr_)
         return 0;
     }
 
+    if (protocol == "ofi") {
+        ofi_listener_t *listener = new (std::nothrow) ofi_listener_t (
+            io_thread, this, options);
+        alloc_assert (listener);
+        rc = listener->set_address (address.c_str ());
+        if (rc != 0) {
+            LIBZMQ_DELETE(listener);
+            event_bind_failed (address, zmq_errno());
+            EXIT_MUTEX ();
+            return -1;
+        }
+
+        // Save last endpoint URI
+        listener->get_address (last_endpoint);
+
+        add_endpoint (last_endpoint.c_str (), (own_t *) listener, NULL);
+        options.connected = true;
+        EXIT_MUTEX ();
+        return 0;
+    }
+
 #if !defined ZMQ_HAVE_WINDOWS && !defined ZMQ_HAVE_OPENVMS
     if (protocol == "ipc") {
         ipc_listener_t *listener = new (std::nothrow) ipc_listener_t (
@@ -878,6 +903,50 @@ int zmq::socket_base_t::connect (const char *addr_)
         }
         //  Defer resolution until a socket is opened
         paddr->resolved.tcp_addr = NULL;
+    }
+
+    if (protocol == "ofi") {
+        //  Do some basic sanity checks on tcp:// address syntax
+        //  - hostname starts with digit or letter, with embedded '-' or '.'
+        //  - IPv6 address may contain hex chars and colons.
+        //  - IPv6 link local address may contain % followed by interface name / zone_id
+        //    (Reference: https://tools.ietf.org/html/rfc4007)
+        //  - IPv4 address may contain decimal digits and dots.
+        //  - Address must end in ":port" where port is *, or numeric
+        //  - Address may contain two parts separated by ':'
+        //  Following code is quick and dirty check to catch obvious errors,
+        //  without trying to be fully accurate.
+        const char *check = address.c_str ();
+        if (isalnum (*check) || isxdigit (*check) || *check == '[') {
+            check++;
+            while (isalnum  (*check)
+                || isxdigit (*check)
+                || *check == '.' || *check == '-' || *check == ':' || *check == '%'
+                || *check == ';' || *check == ']' || *check == '_'
+            ) {
+                check++;
+            }
+        }
+        //  Assume the worst, now look for success
+        rc = -1;
+        //  Did we reach the end of the address safely?
+        if (*check == 0) {
+            //  Do we have a valid port string? (cannot be '*' in connect
+            check = strrchr (address.c_str (), ':');
+            if (check) {
+                check++;
+                if (*check && (isdigit (*check)))
+                    rc = 0;     //  Valid
+            }
+        }
+        if (rc == -1) {
+            errno = EINVAL;
+            LIBZMQ_DELETE(paddr);
+            EXIT_MUTEX ();
+            return -1;
+        }
+        //  Defer resolution until a socket is opened
+        paddr->resolved.ofi_addr = NULL;
     }
 #if !defined ZMQ_HAVE_WINDOWS && !defined ZMQ_HAVE_OPENVMS
     else

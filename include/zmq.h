@@ -345,6 +345,11 @@ ZMQ_EXPORT const char *zmq_msg_group (zmq_msg_t *msg);
 #define ZMQ_VMCI_BUFFER_MAX_SIZE 87
 #define ZMQ_VMCI_CONNECT_TIMEOUT 88
 #define ZMQ_USE_FD 89
+#define ZMQ_OFI_MAXRT 90
+#define ZMQ_OFI_KEEPALIVE 91
+#define ZMQ_OFI_KEEPALIVE_CNT 92
+#define ZMQ_OFI_KEEPALIVE_IDLE 93
+#define ZMQ_OFI_KEEPALIVE_INTVL 94
 
 /*  Message options                                                           */
 #define ZMQ_MORE 1
@@ -370,6 +375,7 @@ ZMQ_EXPORT const char *zmq_msg_group (zmq_msg_t *msg);
 #define ZMQ_IPC_FILTER_UID          59
 #define ZMQ_IPC_FILTER_GID          60
 #define ZMQ_IPV4ONLY                31
+#define ZMQ_OFI_ACCEPT_FILTER       95
 #define ZMQ_DELAY_ATTACH_ON_CONNECT ZMQ_IMMEDIATE
 #define ZMQ_NOBLOCK                 ZMQ_DONTWAIT
 #define ZMQ_FAIL_UNROUTABLE         ZMQ_ROUTER_MANDATORY

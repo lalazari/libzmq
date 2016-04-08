@@ -27,53 +27,39 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __ZMQ_ADDRESS_HPP_INCLUDED__
-#define __ZMQ_ADDRESS_HPP_INCLUDED__
+#ifndef __ZMQ_OFI_HPP_INCLUDED__
+#define __ZMQ_OFI_HPP_INCLUDED__
 
-#include <string>
+#include "fd.hpp"
 
 namespace zmq
 {
-    class ctx_t;
-    class tcp_address_t;
-    class ofi_address_t;
-    class udp_address_t;
-#if !defined ZMQ_HAVE_WINDOWS && !defined ZMQ_HAVE_OPENVMS
-    class ipc_address_t;
-#endif
-#if defined ZMQ_HAVE_LINUX
-    class tipc_address_t;
-#endif
-#if defined ZMQ_HAVE_VMCI
-    class vmci_address_t;
-#endif
-    struct address_t {
-        address_t (const std::string &protocol_, const std::string &address_, ctx_t *parent_);
 
-        ~address_t ();
+    //  Tunes the supplied OFI socket for the best latency.
+    void tune_ofi_socket (fd_t s_);
 
-        const std::string protocol;
-        const std::string address;
-        ctx_t *parent;
+    //  Sets the socket send buffer size.
+    void set_ofi_send_buffer (fd_t sockfd_, int bufsize_);
 
-        //  Protocol specific resolved address
-        union {
-            tcp_address_t *tcp_addr;
-            ofi_address_t *ofi_addr;
-            udp_address_t *udp_addr;
-#if !defined ZMQ_HAVE_WINDOWS && !defined ZMQ_HAVE_OPENVMS
-            ipc_address_t *ipc_addr;
-#endif
-#if defined ZMQ_HAVE_LINUX
-            tipc_address_t *tipc_addr;
-#endif
-#if defined ZMQ_HAVE_VMCI
-            vmci_address_t *vmci_addr;
-#endif
-        } resolved;
+    //  Sets the socket receive buffer size.
+    void set_ofi_receive_buffer (fd_t sockfd_, int bufsize_);
 
-        int to_string (std::string &addr_) const;
-    };
+    //  Tunes OFI keep-alives
+    void tune_ofi_keepalives (fd_t s_, int keepalive_, int keepalive_cnt_, int keepalive_idle_, int keepalive_intvl_);
+
+    //  Tunes OFI max retransmit timeout
+    void tune_ofi_maxrt (fd_t sockfd_, int timeout_);
+
+    //  Writes data to the socket. Returns the number of bytes actually
+    //  written (even zero is to be considered to be a success). In case
+    //  of error or orderly shutdown by the other peer -1 is returned.
+    int ofi_write (fd_t s_, const void *data_, size_t size_);
+
+    //  Reads data from the socket (up to 'size' bytes).
+    //  Returns the number of bytes actually read or -1 on error.
+    //  Zero indicates the peer has closed the connection.
+    int ofi_read (fd_t s_, void *data_, size_t size_);
+
 }
 
-#endif
+#endif 

@@ -34,6 +34,7 @@
 #include "ctx.hpp"
 #include "err.hpp"
 #include "tcp_address.hpp"
+#include "ofi_address.hpp"
 #include "udp_address.hpp"
 #include "ipc_address.hpp"
 #include "tipc_address.hpp"
@@ -59,6 +60,11 @@ zmq::address_t::~address_t ()
     if (protocol == "tcp") {
         if (resolved.tcp_addr) {
             LIBZMQ_DELETE(resolved.tcp_addr);
+        }
+    }
+    if (protocol == "ofi") {
+        if (resolved.ofi_addr) {
+            LIBZMQ_DELETE(resolved.ofi_addr);
         }
     }
     if (protocol == "udp") {
@@ -97,6 +103,10 @@ int zmq::address_t::to_string (std::string &addr_) const
     if (protocol == "tcp") {
         if (resolved.tcp_addr)
             return resolved.tcp_addr->to_string (addr_);
+    }
+    if (protocol == "ofi") {
+        if (resolved.ofi_addr)
+            return resolved.ofi_addr->to_string (addr_);
     }
     if (protocol == "udp") {
         if (resolved.udp_addr)

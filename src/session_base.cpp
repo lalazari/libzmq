@@ -35,6 +35,7 @@
 #include "pipe.hpp"
 #include "likely.hpp"
 #include "tcp_connecter.hpp"
+#include "ofi_connecter.hpp"
 #include "ipc_connecter.hpp"
 #include "tipc_connecter.hpp"
 #include "socks_connecter.hpp"
@@ -443,6 +444,41 @@ void zmq::session_base_t::engine_error (
         zap_pipe->check_read ();
 }
 
+void zmq::session_base_t::engine_error (
+        zmq::ofi_engine_t::error_reason_t reason)
+{
+    //  Engine is dead. Let's forget about it.
+    engine = NULL;
+
+    //  Remove any half-done messages from the pipes.
+    if (pipe)
+        clean_pipes ();
+
+    zmq_assert (reason == ofi_engine_t::connection_error
+             || reason == ofi_engine_t::timeout_error
+             || reason == ofi_engine_t::protocol_error);
+
+    switch (reason) {
+        case ofi_engine_t::timeout_error:
+        case ofi_engine_t::connection_error:
+            if (active)
+                reconnect ();
+            else
+                terminate ();
+            break;
+        case ofi_engine_t::protocol_error:
+            terminate ();
+            break;
+    }
+
+    //  Just in case there's only a delimiter in the pipe.
+    if (pipe)
+        pipe->check_read ();
+
+    if (zap_pipe)
+        zap_pipe->check_read ();
+}
+
 void zmq::session_base_t::process_term (int linger_)
 {
     zmq_assert (!pending);
@@ -544,6 +580,26 @@ void zmq::session_base_t::start_connecting (bool wait_)
         else {
             tcp_connecter_t *connecter = new (std::nothrow)
                 tcp_connecter_t (io_thread, this, options, addr, wait_);
+            alloc_assert (connecter);
+            launch_child (connecter);
+        }
+        return;
+    }
+
+    if (addr->protocol == "ofi") {
+        if (!options.socks_proxy_address.empty()) {
+            address_t *proxy_address = new (std::nothrow)
+                address_t ("ofi", options.socks_proxy_address, this->get_ctx ());
+            alloc_assert (proxy_address);
+            socks_connecter_t *connecter =
+                new (std::nothrow) socks_connecter_t (
+                    io_thread, this, options, addr, proxy_address, wait_);
+            alloc_assert (connecter);
+            launch_child (connecter);
+        }
+        else {
+            ofi_connecter_t *connecter = new (std::nothrow)
+                ofi_connecter_t (io_thread, this, options, addr, wait_);
             alloc_assert (connecter);
             launch_child (connecter);
         }

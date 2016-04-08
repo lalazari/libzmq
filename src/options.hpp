@@ -37,6 +37,7 @@
 #include "stddef.h"
 #include "stdint.hpp"
 #include "tcp_address.hpp"
+#include "ofi_address.hpp"
 #include "../include/zmq.h"
 
 #if defined ZMQ_HAVE_SO_PEERCRED || defined ZMQ_HAVE_LOCAL_PEERCRED
@@ -109,6 +110,8 @@ namespace zmq
         //  Default 0 (unused)
         int tcp_maxrt;
 
+        int ofi_maxrt;
+
         //  Minimum interval between attempts to reconnect, in milliseconds.
         //  Default 100ms
         int reconnect_ivl;
@@ -159,9 +162,18 @@ namespace zmq
         int tcp_keepalive_idle;
         int tcp_keepalive_intvl;
 
+        int ofi_keepalive;
+        int ofi_keepalive_cnt;
+        int ofi_keepalive_idle;
+        int ofi_keepalive_intvl;
+
+
         // TCP accept() filters
         typedef std::vector <tcp_address_mask_t> tcp_accept_filters_t;
         tcp_accept_filters_t tcp_accept_filters;
+
+        typedef std::vector <ofi_address_mask_t> ofi_accept_filters_t;
+        ofi_accept_filters_t ofi_accept_filters;
 
         // IPC accept() filters
 #       if defined ZMQ_HAVE_SO_PEERCRED || defined ZMQ_HAVE_LOCAL_PEERCRED

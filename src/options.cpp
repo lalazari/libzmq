@@ -50,6 +50,7 @@ zmq::options_t::options_t () :
     linger (-1),
     connect_timeout (0),
     tcp_maxrt (0),
+    ofi_maxrt (0),
     reconnect_ivl (100),
     reconnect_ivl_max (0),
     backlog (100),
@@ -67,6 +68,10 @@ zmq::options_t::options_t () :
     tcp_keepalive_cnt (-1),
     tcp_keepalive_idle (-1),
     tcp_keepalive_intvl (-1),
+    ofi_keepalive (-1),
+    ofi_keepalive_cnt (-1),
+    ofi_keepalive_idle (-1),
+    ofi_keepalive_intvl (-1),
     mechanism (ZMQ_NULL),
     as_server (0),
     gss_plaintext (false),
@@ -187,6 +192,13 @@ int zmq::options_t::setsockopt (int option_, const void *optval_,
             }
             break;
 
+        case ZMQ_OFI_MAXRT:
+            if (is_int && value >= 0) {
+                ofi_maxrt = value;
+                return 0;
+            }
+            break;    
+
         case ZMQ_RECONNECT_IVL:
             if (is_int && value >= -1) {
                 reconnect_ivl = value;
@@ -279,12 +291,26 @@ int zmq::options_t::setsockopt (int option_, const void *optval_,
             }
             break;
 
+        case ZMQ_OFI_KEEPALIVE:
+            if (is_int && (value == -1 || value == 0 || value == 1)) {
+                ofi_keepalive = value;
+                return 0;
+            }
+            break;    
+
         case ZMQ_TCP_KEEPALIVE_CNT:
             if (is_int && (value == -1 || value >= 0)) {
                 tcp_keepalive_cnt = value;
                 return 0;
             }
             break;
+
+        case ZMQ_OFI_KEEPALIVE_CNT:
+            if (is_int && (value == -1 || value >= 0)) {
+                ofi_keepalive_cnt = value;
+                return 0;
+            }
+            break;    
 
         case ZMQ_TCP_KEEPALIVE_IDLE:
             if (is_int && (value == -1 || value >= 0)) {
@@ -293,12 +319,26 @@ int zmq::options_t::setsockopt (int option_, const void *optval_,
             }
             break;
 
+        case ZMQ_OFI_KEEPALIVE_IDLE:
+            if (is_int && (value == -1 || value >= 0)) {
+                ofi_keepalive_idle = value;
+                return 0;
+            }
+            break;    
+
         case ZMQ_TCP_KEEPALIVE_INTVL:
             if (is_int && (value == -1 || value >= 0)) {
                 tcp_keepalive_intvl = value;
                 return 0;
             }
             break;
+
+        case ZMQ_OFI_KEEPALIVE_INTVL:
+            if (is_int && (value == -1 || value >= 0)) {
+                ofi_keepalive_intvl = value;
+                return 0;
+            }
+            break;    
 
         case ZMQ_IMMEDIATE:
             if (is_int && (value == 0 || value == 1)) {
@@ -312,6 +352,12 @@ int zmq::options_t::setsockopt (int option_, const void *optval_,
                 tcp_accept_filters.clear ();
                 return 0;
             }
+
+         case ZMQ_OFI_ACCEPT_FILTER:
+            if (optvallen_ == 0 && optval_ == NULL) {
+                ofi_accept_filters.clear ();
+                return 0;
+            }    
             else
             if (optvallen_ > 0 && optvallen_ < 256 && optval_ != NULL && *((const char*) optval_) != 0) {
                 std::string filter_str ((const char *) optval_, optvallen_);
@@ -319,6 +365,16 @@ int zmq::options_t::setsockopt (int option_, const void *optval_,
                 int rc = mask.resolve (filter_str.c_str (), ipv6);
                 if (rc == 0) {
                     tcp_accept_filters.push_back (mask);
+                    return 0;
+                }
+            }
+            else
+            if (optvallen_ > 0 && optvallen_ < 256 && optval_ != NULL && *((const char*) optval_) != 0) {
+                std::string filter_str ((const char *) optval_, optvallen_);
+                ofi_address_mask_t mask;
+                int rc = mask.resolve (filter_str.c_str (), ipv6);
+                if (rc == 0) {
+                    ofi_accept_filters.push_back (mask);
                     return 0;
                 }
             }
@@ -740,6 +796,13 @@ int zmq::options_t::getsockopt (int option_, void *optval_, size_t *optvallen_) 
             }
             break;
 
+        case ZMQ_OFI_MAXRT:
+            if (is_int) {
+                *value = ofi_maxrt;
+                return 0;
+            }
+            break;    
+
         case ZMQ_RECONNECT_IVL:
             if (is_int) {
                 *value = reconnect_ivl;
@@ -833,9 +896,23 @@ int zmq::options_t::getsockopt (int option_, void *optval_, size_t *optvallen_) 
             }
             break;
 
+        case ZMQ_OFI_KEEPALIVE:
+            if (is_int) {
+                *value = ofi_keepalive;
+                return 0;
+            }
+            break;    
+
         case ZMQ_TCP_KEEPALIVE_CNT:
             if (is_int) {
                 *value = tcp_keepalive_cnt;
+                return 0;
+            }
+            break;
+
+        case ZMQ_OFI_KEEPALIVE_CNT:
+            if (is_int) {
+                *value = ofi_keepalive_cnt;
                 return 0;
             }
             break;
@@ -847,12 +924,26 @@ int zmq::options_t::getsockopt (int option_, void *optval_, size_t *optvallen_) 
             }
             break;
 
+        case ZMQ_OFI_KEEPALIVE_IDLE:
+            if (is_int) {
+                *value = ofi_keepalive_idle;
+                return 0;
+            }
+            break;    
+
         case ZMQ_TCP_KEEPALIVE_INTVL:
             if (is_int) {
                 *value = tcp_keepalive_intvl;
                 return 0;
             }
             break;
+
+        case ZMQ_OFI_KEEPALIVE_INTVL:
+            if (is_int) {
+                *value = ofi_keepalive_intvl;
+                return 0;
+            }
+            break;    
 
         case ZMQ_MECHANISM:
             if (is_int) {

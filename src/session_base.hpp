@@ -38,6 +38,7 @@
 #include "pipe.hpp"
 #include "socket_base.hpp"
 #include "stream_engine.hpp"
+#include "ofi_engine.hpp"
 
 namespace zmq
 {
@@ -66,8 +67,8 @@ namespace zmq
         //  Following functions are the interface exposed towards the engine.
         virtual void reset ();
         void flush ();
-        void engine_error (zmq::stream_engine_t::error_reason_t reason);
-
+        virtual void engine_error (zmq::stream_engine_t::error_reason_t reason);
+        virtual void engine_error (zmq::ofi_engine_t::error_reason_t reason);
         //  i_pipe_events interface implementation.
         void read_activated (zmq::pipe_t *pipe_);
         void write_activated (zmq::pipe_t *pipe_);
